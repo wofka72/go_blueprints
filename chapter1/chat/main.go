@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/gomniauth/providers/github"
 	"github.com/stretchr/gomniauth/providers/google"
 	"github.com/stretchr/objx"
+	"os"
+	"go_blueprints/chapter1/trace"
 )
 
 
@@ -40,6 +42,15 @@ func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	t.templ.Execute(w, data)
 }
 
+var (
+	FACEBOOK_CLIENT_ID = "149793185735298"
+	GITHUB_CLIENT_ID = "b4ec743073297d6f03e3"
+	GOOGLE_CLIENT_ID = "24677165843-i6gr6chmuq7ea6cnvb8ouch84q70e19p.apps.googleusercontent.com"
+
+	FACEBOOK_SECRET = "ilEAiYePbCPkls9tQcDW3llhyGY"
+	GITHUB_SECRET = "fce9352f0d0c0e9d96cb050db4b5774de53e3f6a"
+	GOOGLE_SECRET = "qWIdbjuC9kr4ZqzeJ3EuLgMW"
+)
 
 func main() {
 	var addr = flag.String("host", ":8080", "The addr of the application.")
@@ -49,19 +60,19 @@ func main() {
 	// you can use the hash or phrase that I want
 	gomniauth.SetSecurityKey("some long key")
 	gomniauth.WithProviders(
-		facebook.New("149793185735298",
-			"ilEAiYePbCPkls9tQcDW3llhyGY",
+		facebook.New(FACEBOOK_CLIENT_ID,
+			FACEBOOK_SECRET,
 			"http://localhost:8080/auth/callback/facebook"),
-		github.New("b4ec743073297d6f03e3",
-			"fce9352f0d0c0e9d96cb050db4b5774de53e3f6a",
+		github.New(GITHUB_CLIENT_ID,
+			GITHUB_SECRET,
 			"http://localhost:8080/auth/callback/github"),
-		google.New("24677165843-i6gr6chmuq7ea6cnvb8ouch84q70e19p.apps.googleusercontent.com",
-			"qWIdbjuC9kr4ZqzeJ3EuLgMW",
+		google.New(GOOGLE_CLIENT_ID,
+			GOOGLE_SECRET,
 			"http://localhost:8080/auth/callback/google"),
 	)
 
 	r := newRoom()
-	// r.tracer = trace.New(os.Stdout)
+	r.tracer = trace.New(os.Stdout)
 
 	http.Handle("/chat",
 		MustAuth(&templateHandler{filename: "chat.html"}))

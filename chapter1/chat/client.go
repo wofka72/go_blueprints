@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gorilla/websocket"
 	"time"
+	"log"
 )
 
 
@@ -22,7 +23,9 @@ func (c *client) read() {
 	for {
 		var msg *message
 		if err := c.socket.ReadJSON(&msg); err == nil {
-			msg.When = time.Now()
+			timeString := time.Now().Format(time.Stamp)
+			log.Println("TIME = ", timeString)
+			msg.When = timeString
 			msg.Name = c.userData["name"].(string)
 			c.room.forward <- msg
 		} else {

@@ -40,27 +40,27 @@ func (r *room) run() {
 		case client := <-r.join:
 			// joining
 			r.clients[client] = true
-			r.tracer.Trace("New client joined")
+			r.tracer.Trace("Client ", client.userData["name"], " joined")
 
 		case client := <-r.leave:
 			// leaving
 			delete(r.clients, client)
 			close(client.send)
-			r.tracer.Trace("Client left")
+			r.tracer.Trace("Client ", client.userData["name"], " left")
 
 		case msg := <-r.forward:
-			r.tracer.Trace("Message received: ", msg.Message)
+			r.tracer.Trace("Message received: ", msg.Message, " from user: ", msg.Name)
 			// forward message to all clients
 			for client := range r.clients {
 				select {
 				case client.send <- msg:
 					// send the message
-					r.tracer.Trace(" -- sent to client")
+					r.tracer.Trace(" -- sent to client ", msg.Name, "  at ", msg.When)
 				default:
 					// failed to send
 					delete(r.clients, client)
 					close(client.send)
-					r.tracer.Trace(" -- failed to send, cleaned up client")
+					r.tracer.Trace(" -- failed to send, cleaned up client ", msg.Name)
 				}
 			}
 		}

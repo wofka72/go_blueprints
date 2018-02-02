@@ -10,7 +10,7 @@
 <body>
     <ul id="messages"></ul>
     <form id="chatbox">
-        {{.UserData.name}}:<br/>
+        <strong>{{.UserData.name}}:<strong><br/>
         <textarea></textarea>
         <input type="submit" value="Send" />
     </form>
@@ -45,7 +45,9 @@
                     var msg = eval("("+e.data+")");
                     messages.append(
                             $("<li>").append(
-                                    $("<strong>").text(msg.Name + ": "),
+                                    $("<strong>").text(msg.Name),
+                                    " at ",
+                                    $("<i>").text(msg.When + ": "),
                                     $("<span>").text(msg.Message)
                             )
                     );
