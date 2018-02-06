@@ -2,12 +2,31 @@ package main
 
 import (
 	"net/http"
-	"strings"
-	"log"
-	"fmt"
 	"github.com/stretchr/gomniauth"
+	"log"
 	"github.com/stretchr/objx"
+	"crypto/md5"
+	"io"
+	"fmt"
+
+	gomniauthcommon "github.com/stretchr/gomniauth/common"
+	"strings"
 )
+
+
+type ChatUser interface {
+	UniqueID() string
+	AvatarURL() string
+}
+
+type chatUser struct {
+	gomniauthcommon.User
+	uniqueID string
+}
+
+func (u chatUser) UniqueID() string {
+	return u.uniqueID
+}
 
 type authHandler struct {
 	next http.Handler
@@ -41,13 +60,11 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	case "login":
 		provider, err := gomniauth.Provider(provider)
 		if err != nil {
-			log.Fatalln("Error when trying to get provider",
-				provider, "-", err)
+			log.Fatalln("Error when trying to get provider", provider, "-", err)
 		}
 		loginUrl, err := provider.GetBeginAuthURL(nil, nil)
 		if err != nil {
-			log.Fatalln("Error when trying to GetBeginAuthURL for",
-				provider, "-", err)
+			log.Fatalln("Error when trying to GetBeginAuthURL for", provider, "-", err)
 		}
 		w.Header().Set("Location", loginUrl)
 		w.WriteHeader(http.StatusTemporaryRedirect)
@@ -63,10 +80,23 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		user, err := provider.GetUser(creds)
 		if err != nil {
-			log.Fatalln("Error when trying to get user from", provider, "-", err)
+			log.Fatalln("Error when trying to get user from", provider, "-",
+				err)
 		}
+		chatUser := &chatUser{User: user}
+		m := md5.New()
+		io.WriteString(m, strings.ToLower(user.Name()))
+		chatUser.uniqueID = fmt.Sprintf("%x", m.Sum(nil))
+		avatarURL, err := avatars.GetAvatarURL(chatUser)
+		if err != nil {
+			log.Fatalln("Error when trying to GetAvatarURL", "-", err)
+		}
+
+		// save some data
 		authCookieValue := objx.New(map[string]interface{}{
-			"name": user.Name(),
+			"userid":     chatUser.uniqueID,
+			"name":       user.Name(),
+			"avatar_url": avatarURL,
 		}).MustBase64()
 		http.SetCookie(w, &http.Cookie{
 			Name:  "auth",

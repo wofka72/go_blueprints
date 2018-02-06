@@ -7,16 +7,24 @@ import (
 	"text/template"
 	"path/filepath"
 	"flag"
-	//"os"
-	//"go_blueprints/chapter1/trace"
+	"os"
+
 	"github.com/stretchr/gomniauth"
 	"github.com/stretchr/gomniauth/providers/facebook"
 	"github.com/stretchr/gomniauth/providers/github"
 	"github.com/stretchr/gomniauth/providers/google"
 	"github.com/stretchr/objx"
-	"os"
+
 	"go_blueprints/chapter1/trace"
 )
+
+
+// set the active Avatar implementation
+var avatars Avatar = TryAvatars{
+	UseFileSystemAvatar,
+	UseAuthAvatar,
+	UseGravatar,
+}
 
 
 // templ represents a single template
@@ -60,18 +68,15 @@ func main() {
 	// you can use the hash or phrase that I want
 	gomniauth.SetSecurityKey("some long key")
 	gomniauth.WithProviders(
-		facebook.New(FACEBOOK_CLIENT_ID,
-			FACEBOOK_SECRET,
+		facebook.New(FACEBOOK_CLIENT_ID, FACEBOOK_SECRET,
 			"http://localhost:8080/auth/callback/facebook"),
-		github.New(GITHUB_CLIENT_ID,
-			GITHUB_SECRET,
+		github.New(GITHUB_CLIENT_ID, GITHUB_SECRET,
 			"http://localhost:8080/auth/callback/github"),
-		google.New(GOOGLE_CLIENT_ID,
-			GOOGLE_SECRET,
+		google.New(GOOGLE_CLIENT_ID, GOOGLE_SECRET,
 			"http://localhost:8080/auth/callback/google"),
 	)
 
-	r := newRoom()
+	r := newRoom(UseFileSystemAvatar)
 	r.tracer = trace.New(os.Stdout)
 
 	http.Handle("/chat",
@@ -80,6 +85,23 @@ func main() {
 	http.HandleFunc("/auth/", loginHandler)
 	http.Handle("/room", r)
 
+	http.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{
+			Name:   "auth",
+			Value:  "",
+			Path:   "/",
+			MaxAge: -1,
+		})
+		w.Header()["Location"] = []string{"/chat"}
+		w.WriteHeader(http.StatusTemporaryRedirect)
+	})
+
+	http.Handle("/upload", &templateHandler{filename: "upload.html"})
+	http.HandleFunc("/uploader", uploaderHandler)
+
+	http.Handle("/avatars/",
+		http.StripPrefix("/avatars/",
+			http.FileServer(http.Dir("./avatars"))))
 
 	// get the room going
 	go r.run()
